@@ -1,0 +1,40 @@
+version: "3.9"
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: infra/docker/Dockerfile
+    container_name: mlport-api
+    environment:
+      # You’ll use this in later stages to connect to Mongo
+      MONGO_URL: "mongodb://mongo:27017/mlport"
+    ports:
+      - "8080:8000"     # host:container
+    depends_on:
+      - mongo
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import sys,urllib.request,json; r=urllib.request.urlopen('http://localhost:8000/v1/health', timeout=2); sys.exit(0 if r.status==200 and json.loads(r.read().decode()).get('status')=='ok' else 1)\""]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
+  mongo:
+    image: mongo:7.0
+    container_name: mlport-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+volumes:
+  mongo_data:
