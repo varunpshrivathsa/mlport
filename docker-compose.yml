@@ -9,6 +9,7 @@ services:
     environment:
       # You’ll use this in later stages to connect to Mongo
       MONGO_URL: "mongodb://mongo:27017/mlport"
+      JWT_SECRET: "supersecret123"
     ports:
       - "8080:8000"     # host:container
     depends_on:

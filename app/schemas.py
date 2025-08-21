@@ -2,6 +2,14 @@
 from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field, ConfigDict
 
+
+class Principal(BaseModel):
+    tenant_id: str
+    roles: list[str]
+    plan: Optional[str]
+    subject: Optional[str]
+    metadata: dict
+
 class InferenceRequest(BaseModel):
     model: str = Field(..., description="Registered model name (e.g., 'demo').")
     version: Optional[str] = Field(None, description="Model version; if omitted, uses the model's default.")

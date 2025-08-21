@@ -1,8 +1,10 @@
 # app/routers/inference.py
 from time import perf_counter
 from typing import Any, Dict, List
-from fastapi import APIRouter, HTTPException, Response, Request
-from ..schemas import InferenceRequest, InferenceResponse
+from fastapi import APIRouter, HTTPException, Response, Request, Depends
+
+from ..schemas import InferenceRequest, InferenceResponse, Principal
+from ..auth import verify_jwt
 from ..core.logger import log  # optional
 
 router = APIRouter(prefix="/v1", tags=["inference"])
@@ -19,7 +21,7 @@ def _mock_predict(req: InferenceRequest) -> Dict[str, Any]:
 @router.post(
     "/infer",
     response_model=InferenceResponse,
-    summary="Run inference (stub)",
+    summary="Run inference (stub, auth protected)",
     responses={
         200: {
             "headers": {
@@ -31,7 +33,12 @@ def _mock_predict(req: InferenceRequest) -> Dict[str, Any]:
         }
     },
 )
-def infer(req: InferenceRequest, request: Request, response: Response) -> InferenceResponse:
+def infer(
+    req: InferenceRequest,
+    request: Request,
+    response: Response,
+    principal: Principal = Depends(verify_jwt)  # 🔑 NEW: Require valid tenant
+) -> InferenceResponse:
     meta = _DEFAULTS.get(req.model)
     if not meta:
         raise HTTPException(status_code=404, detail=f"Unknown model '{req.model}'")
@@ -44,12 +51,11 @@ def infer(req: InferenceRequest, request: Request, response: Response) -> Infere
     output = _mock_predict(req)
     latency_ms = (perf_counter() - t0) * 1000.0
 
-    # ✅ request_id was set by middleware and already added to response header
     rid = getattr(request.state, "request_id", None)
 
-    # optional structured log
     try:
-        log("info", "infer.ok", model=req.model, version=version, latency_ms=latency_ms)
+        log("info", "infer.ok", model=req.model, version=version,
+            latency_ms=latency_ms, tenant=principal.tenant_id)
     except Exception:
         pass
 

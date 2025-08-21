@@ -1,12 +1,13 @@
-from fastapi import APIRouter
-from ..schemas import ModelInfo, ModelsListResponse
+from fastapi import APIRouter, Depends
+from app.auth import verify_jwt
+from app.schemas import Principal
 
-router = APIRouter(prefix="/v1", tags=["models"])
+router = APIRouter(prefix="/v1/models", tags=["models"])
 
-_MODELS = [
-    ModelInfo(name="demo", versions=["1.0", "1.1"], default_version="1.0")
-]
-
-@router.get("/models", response_model=ModelsListResponse, summary="List available models (stub)")
-def list_models() -> ModelsListResponse:
-    return ModelsListResponse(models=_MODELS)
+@router.get("")
+def list_models(principal: Principal = Depends(verify_jwt)):
+    # You can use principal.tenant_id, principal.roles etc
+    return {
+        "tenant": principal.tenant_id,
+        "models": [{"name": "demo", "version": "1.0"}]
+    }
